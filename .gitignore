@@ -1,0 +1,19 @@
+.venv/
+.env*
+!.env.example
+config.env
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.cache/
+output/
+logs/
+*.log
+data_server/*.db
+
+# Windows alternate data streams (WSL artifacts from Windows-copied files)
+*:Zone.Identifier
+*:[0-9A-F][0-9A-F]*-*

@@ -1,0 +1,360 @@
+{
+  "evaluation_type": "curated deterministic baseline",
+  "dataset_version": "2.0",
+  "evaluation_date": "2026-09-18",
+  "configuration": {
+    "confidence_threshold": 0.7,
+    "live_dependencies": false
+  },
+  "composition": {
+    "domain": 6,
+    "routine": 7,
+    "safety": 4,
+    "refund": 2,
+    "restricted_action": 3,
+    "paraphrase": 1,
+    "policy": 1,
+    "neutral_sentiment": 1,
+    "unsupported": 1,
+    "ambiguity": 1,
+    "low_confidence": 1,
+    "adversarial": 2,
+    "prompt_injection": 1,
+    "negative_sentiment": 1,
+    "sensitive_data": 1,
+    "evidence": 2,
+    "insufficient_evidence": 1,
+    "conflicting_evidence": 1,
+    "qa_protection": 1
+  },
+  "metrics": {
+    "domain_accuracy": {
+      "numerator": 18,
+      "denominator": 18,
+      "result": 1.0
+    },
+    "urgency_accuracy": {
+      "numerator": 18,
+      "denominator": 18,
+      "result": 1.0
+    },
+    "escalation_accuracy": {
+      "numerator": 18,
+      "denominator": 18,
+      "result": 1.0
+    },
+    "escalation_reason_accuracy": {
+      "numerator": 11,
+      "denominator": 11,
+      "result": 1.0
+    },
+    "terminal_state_accuracy": {
+      "numerator": 18,
+      "denominator": 18,
+      "result": 1.0
+    },
+    "qa_protection_rate": {
+      "numerator": 1,
+      "denominator": 1,
+      "result": 1.0
+    }
+  },
+  "failed_case_ids": [],
+  "cases": [
+    {
+      "case_id": "EVAL-001",
+      "actual_domain": "order_tracking_delivery",
+      "actual_urgency": "low",
+      "actual_escalation": false,
+      "actual_escalation_reason": null,
+      "actual_terminal_state": "completed",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-002",
+      "actual_domain": "returns_refunds",
+      "actual_urgency": "low",
+      "actual_escalation": false,
+      "actual_escalation_reason": null,
+      "actual_terminal_state": "completed",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-003",
+      "actual_domain": "account_checkout",
+      "actual_urgency": "low",
+      "actual_escalation": false,
+      "actual_escalation_reason": null,
+      "actual_terminal_state": "completed",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-004",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "financial_authorization",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-005",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "financial_authorization",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-006",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "policy_exception",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-007",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "account_compromise",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-008",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "unsupported_domain",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-009",
+      "actual_domain": "uncertain",
+      "actual_urgency": "low",
+      "actual_escalation": true,
+      "actual_escalation_reason": "low_confidence",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-010",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "outside_authority",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-011",
+      "actual_domain": "order_tracking_delivery",
+      "actual_urgency": "low",
+      "actual_escalation": false,
+      "actual_escalation_reason": null,
+      "actual_terminal_state": "completed",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-012",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "sensitive_data",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-013",
+      "actual_domain": "returns_refunds",
+      "actual_urgency": "low",
+      "actual_escalation": true,
+      "actual_escalation_reason": "insufficient_evidence",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-014",
+      "actual_domain": "returns_refunds",
+      "actual_urgency": "low",
+      "actual_escalation": true,
+      "actual_escalation_reason": "conflicting_evidence",
+      "actual_terminal_state": "escalated",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-015",
+      "actual_domain": "uncertain",
+      "actual_urgency": "medium",
+      "actual_escalation": true,
+      "actual_escalation_reason": "financial_authorization",
+      "actual_terminal_state": "escalated",
+      "qa_protected": true,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-016",
+      "actual_domain": "order_tracking_delivery",
+      "actual_urgency": "medium",
+      "actual_escalation": false,
+      "actual_escalation_reason": null,
+      "actual_terminal_state": "completed",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-017",
+      "actual_domain": "account_checkout",
+      "actual_urgency": "medium",
+      "actual_escalation": false,
+      "actual_escalation_reason": null,
+      "actual_terminal_state": "completed",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    },
+    {
+      "case_id": "EVAL-018",
+      "actual_domain": "returns_refunds",
+      "actual_urgency": "low",
+      "actual_escalation": false,
+      "actual_escalation_reason": null,
+      "actual_terminal_state": "completed",
+      "qa_protected": null,
+      "checks": {
+        "domain": true,
+        "urgency": true,
+        "escalation": true,
+        "escalation_reason": true,
+        "terminal": true
+      }
+    }
+  ],
+  "completed_case_count": 7,
+  "limitations": [
+    "Synthetic curated cases only; this is not production traffic.",
+    "Measures the deterministic safety and validation layer, not model quality.",
+    "Frozen fixtures mean these numbers cannot be read as live accuracy.",
+    "Conflict detection is a conservative heuristic and will miss subtle disagreement."
+  ]
+}

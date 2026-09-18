@@ -1,0 +1,6 @@
+{
+  "ticket_id": "TKT-DEMO-009",
+  "created_at": "2026-09-17T12:00:00Z",
+  "customer_message": "My payment will not go through at checkout.",
+  "customer_reference": "CUS-001"
+}

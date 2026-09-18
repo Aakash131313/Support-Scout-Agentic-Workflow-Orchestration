@@ -1,0 +1,6 @@
+{
+  "ticket_id": "TKT-DEMO-002",
+  "created_at": "2026-09-17T12:00:00Z",
+  "customer_message": "The tracking says my package was delivered but it never arrived.",
+  "order_reference": "ORD-1002"
+}

@@ -1,0 +1,6 @@
+{
+  "ticket_id": "TKT-DEMO-003",
+  "created_at": "2026-09-17T12:00:00Z",
+  "customer_message": "I placed an order two days ago and it still has not shipped.",
+  "order_reference": "ORD-1003"
+}

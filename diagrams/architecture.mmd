@@ -1,0 +1,69 @@
+flowchart TD
+    CLI["CLI: support-scout run"] --> VALIDATE["SupportTicket validation"]
+    VALIDATE --> SCREEN["SafetyScreener<br/>deterministic pre-model screening"]
+
+    SCREEN -->|restricted action| GATE{{"Human approval gate<br/>refund · policy · compromise"}}
+    GATE -->|denied| ESC["ESCALATED<br/>terminal"]
+    GATE -->|approved| ORCH
+    SCREEN -->|other escalation| ESC
+    SCREEN -->|clear| ORCH
+
+    ORCH["OrchestratorAgent<br/><i>ToolCallingAgent</i>"]
+    ORCH <-->|"inspect_workflow_state"| KERNEL
+
+    KERNEL["WorkflowKernel<br/>transitions · escalation · budgets"]
+
+    ORCH -->|"delegate_to_triage"| TRIAGE
+    ORCH -->|"delegate_to_research"| RESEARCH
+    ORCH -->|"delegate_to_support"| SUPPORT
+    ORCH -->|"delegate_to_qa"| QA
+    ORCH -->|"delegate_to_documentation"| DOC
+    ORCH -->|"finalize_workflow"| KERNEL
+
+    subgraph SPECIALISTS["Specialist agents (each a ToolCallingAgent)"]
+        TRIAGE["Triage Agent<br/>analyze_sentiment<br/>list_supported_domains<br/>submit_triage"]
+        RESEARCH["Research Agent<br/>web_search · validate_source_url<br/>fetch_web_page · assess_evidence<br/>submit_research_result"]
+        SUPPORT["Support Agent<br/>get_order/shipment/return_status<br/>get_account/checkout_diagnostics<br/>list_available_evidence · submit_support_draft"]
+        QA["QA Agent<br/>check_evidence_grounding · check_restricted_claims<br/>check_sensitive_data · check_operational_claims<br/>request_support_revision · submit_qa_decision"]
+        DOC["Documentation Agent<br/>list_public_evidence · select_public_evidence<br/>check_article_privacy · submit_article"]
+    end
+
+    TRIAGE --> KERNEL
+    RESEARCH --> KERNEL
+    SUPPORT --> KERNEL
+    QA --> KERNEL
+    DOC --> KERNEL
+
+    RESEARCH -->|"bounded search"| TAVILY["Tavily adapter"]
+    RESEARCH -->|"validate then fetch"| URLPOL["URLPolicy<br/>SSRF defence + redirect revalidation"]
+    URLPOL --> SCRAPER["WebScraper<br/>timeout · size · type · characters"]
+    SUPPORT -->|"read-only HTTP"| OPSVC["Operations service<br/>FastAPI + SQLModel"]
+
+    SCRAPER -->|"EV-NNN"| REGISTRY
+    OPSVC -->|"OP-NNN"| REGISTRY
+    REGISTRY["EvidenceRegistry<br/>deterministic IDs · dedupe"]
+    REGISTRY --> SUPPORT
+    REGISTRY --> QA
+    REGISTRY --> DOC
+
+    KERNEL -->|"QA revise, within limit"| SUPPORT
+    KERNEL -->|"insufficient · conflicting · revision limit · QA block"| ESC
+    KERNEL -->|"documented"| COMPLETE["COMPLETED<br/>terminal"]
+
+    ESC --> ARTIFACTS
+    COMPLETE --> ARTIFACTS
+    ARTIFACTS["ArtifactWriter<br/>written for every terminal state"]
+
+    ARTIFACTS --> OUT[("output/&lt;ticket_id&gt;/<br/>interaction_summary.json<br/>customer_response.md<br/>troubleshooting_article.md<br/>sources.json<br/>operational_sources.json<br/>audit_log.json<br/>agent_trace.json<br/>escalation.json")]
+
+    KERNEL -.->|"every event"| LOGGER
+    SPECIALISTS -.->|"every tool call"| LOGGER
+    LOGGER["RunLogger<br/>redaction on every write"]
+    LOGGER --> LOGS[("logs/&lt;run_id&gt;/trace.jsonl<br/>logs/errors.jsonl")]
+
+    classDef terminal fill:#f9e6e6,stroke:#c44
+    classDef deterministic fill:#e8f0fe,stroke:#4a7
+    classDef agent fill:#fff4e0,stroke:#e90
+    class ESC,COMPLETE terminal
+    class KERNEL,SCREEN,URLPOL,REGISTRY,ARTIFACTS,LOGGER deterministic
+    class ORCH,TRIAGE,RESEARCH,SUPPORT,QA,DOC agent
