@@ -169,6 +169,7 @@ def build_orchestrator(
         confidence_threshold=settings.classification_confidence_threshold,
         max_revisions=settings.max_agent_revisions,
         max_total_tool_calls=settings.max_total_tool_calls,
+        max_delegation_failures=settings.max_delegation_failures,
         max_steps=settings.max_orchestrator_steps,
         **factory_kwargs,
     )

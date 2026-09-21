@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..exceptions import ExecutionBudgetExceeded, WorkflowError
-from ..hitl import ApprovalGate, AutoDenyGate, requires_human_approval
+from ..hitl import ApprovalGate, ApprovalRequest, AutoDenyGate, requires_human_approval
 from ..schemas import (
     AuditEvent,
     DelegationRecord,
@@ -82,15 +82,18 @@ class WorkflowKernel:
         approval_gate: ApprovalGate | None = None,
         max_revisions: int = 1,
         max_total_tool_calls: int = 40,
+        max_delegation_failures: int = 2,
     ) -> None:
         self.state = state
         self.logger = logger
         self.approval_gate = approval_gate or AutoDenyGate()
         self.max_revisions = max_revisions
         self.max_total_tool_calls = max_total_tool_calls
+        self.max_delegation_failures = max_delegation_failures
         self.products: dict[str, Any] = {}
         self.finalized = False
         self.tool_call_count = 0
+        self.delegation_failure_counts: dict[str, int] = {}
 
     # -- audit -------------------------------------------------------------------
     def audit(self, step: str, status: str, details: dict[str, Any] | None = None) -> None:
@@ -168,15 +171,24 @@ class WorkflowKernel:
         """Run the single HITL gate. Returns True only when a human approves.
 
         Called by the kernel rather than by an agent, so the model cannot skip it.
+        The gate receives the full ticket context because an operator cannot decide
+        responsibly about a request they cannot read.
         """
         previous_state = self.state.current_state
         self.state.current_state = WorkflowStatus.AWAITING_HUMAN_APPROVAL
 
         decision = self.approval_gate.request(
-            action=action,
-            reason=reason,
-            context=f"Ticket {self.state.ticket.ticket_id}, domain "
-            f"{self.state.classification.domain.value if self.state.classification else 'unknown'}",
+            request=ApprovalRequest(
+                ticket_id=self.state.ticket.ticket_id,
+                customer_message=self.state.ticket.customer_message,
+                reason=reason,
+                action=action,
+                domain=(
+                    self.state.classification.domain.value
+                    if self.state.classification
+                    else None
+                ),
+            )
         )
 
         self.state.human_approval = decision
@@ -224,6 +236,27 @@ class WorkflowKernel:
 
     def has_delegated(self, specialist: str) -> bool:
         return any(record.specialist == specialist for record in self.state.delegations)
+
+    def note_delegation_failure(self, specialist: str) -> int:
+        """Increment and return the consecutive-failure streak for one specialist.
+
+        A model may retry a failing delegation, but not forever. This streak is what
+        `orchestration_tools._delegate` checks to force a deterministic escalation once
+        the streak crosses `max_delegation_failures`, rather than trusting a prompt
+        instruction alone to make the orchestrator stop retrying.
+        """
+        current = self.delegation_failure_counts.get(specialist, 0) + 1
+        self.delegation_failure_counts[specialist] = current
+        return current
+
+    def note_delegation_success(self, specialist: str) -> None:
+        """Reset a specialist's failure streak once it succeeds.
+
+        Without this, a specialist that fails once, succeeds, and later fails again
+        (for an unrelated reason, e.g. during a QA-requested revision) would inherit
+        a stale count from its first attempt.
+        """
+        self.delegation_failure_counts[specialist] = 0
 
     # -- specialist results ------------------------------------------------------
     def apply_triage(

@@ -261,9 +261,13 @@ def test_at011_conflicting_sources_escalate(orchestrator_builder):
             "final_url": "https://help.example.com/late-delivery",
         },
     }
-    from tests.scripts import research_script
+    from tests.scripts import research_script, triage_script
 
-    model = full_happy_path_model(ScriptedModel, research=research_script(pages=2))
+    model = full_happy_path_model(
+        ScriptedModel,
+        triage=triage_script(domain="returns_refunds", intent="return an opened item"),
+        research=research_script(pages=2),
+    )
     orchestrator = orchestrator_builder(model, scraper=FakeScraper(pages=conflicting_pages))
 
     result = orchestrator.run(make_ticket("Can I return an opened item?"))

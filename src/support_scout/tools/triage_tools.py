@@ -5,6 +5,10 @@ model call. That makes it independently testable and makes the separation the mi
 requires explicit: sentiment influences *tone and priority*, never authority. A furious
 customer asking a routine question still gets routine handling; a calm customer
 reporting account compromise still escalates.
+
+`submit_triage` is idempotent. Every submit tool in this project carries the same
+"call this exactly once" instruction, and a live run showed the QA equivalent being
+called eleven times because nothing enforced it. The same guard is applied here.
 """
 from __future__ import annotations
 
@@ -174,7 +178,8 @@ def build_triage_tools(workspace: TriageWorkspace) -> list[Any]:
         """Submit the triage decision. Call this exactly once, at the end.
 
         analyze_sentiment must be called first, because sentiment is part of the
-        triage record.
+        triage record. The first submission is final: calling this again returns
+        "already_submitted" and does not change the recorded classification.
 
         Args:
             domain: One of the values returned by list_supported_domains.
@@ -183,6 +188,22 @@ def build_triage_tools(workspace: TriageWorkspace) -> list[Any]:
             confidence: Classification confidence between 0.0 and 1.0.
             uncertainty_reason: Why the domain is uncertain, or "" when it is not.
         """
+        # The first submission wins. A repeat call means the agent has not noticed it
+        # is finished; say so plainly instead of silently overwriting the result.
+        if workspace.submitted and workspace.classification is not None:
+            return json.dumps(
+                {
+                    "status": "already_submitted",
+                    "reason": (
+                        "Triage was already submitted for this ticket and cannot be "
+                        "changed. Your work here is complete; stop calling this tool."
+                    ),
+                    "domain": workspace.classification.domain.value,
+                    "urgency": workspace.classification.urgency.value,
+                    "confidence": workspace.classification.confidence,
+                }
+            )
+
         if workspace.sentiment is None:
             return json.dumps(
                 {"status": "rejected", "reason": "Call analyze_sentiment before submitting triage."}

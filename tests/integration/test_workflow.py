@@ -265,8 +265,22 @@ def test_it007_search_outage_is_controlled(orchestrator_builder):
 
 def test_it007_operations_outage_still_produces_a_response(orchestrator_builder):
     """The workflow degrades to public guidance rather than failing outright."""
+    # With the operations service down, nothing is known about this order. The
+    # response must therefore make no claim about it: check_operational_claims
+    # rejects a customer-specific status assertion that cites no OP- evidence, which
+    # is exactly the fabrication this outage scenario could otherwise produce.
+    degraded_response = (
+        "Thanks for flagging this, and sorry for the wait. I could not retrieve live "
+        "order details just now, so I cannot confirm where your parcel is at this "
+        "moment. Tracking often pauses between carrier scans on standard shipping. "
+        "Please check the tracking reference on the carrier's own website, and reply "
+        "here if it has not moved after another business day."
+    )
     orchestrator = orchestrator_builder(
-        full_happy_path_model(ScriptedModel), data_client=FakeDataClient(unavailable=True)
+        full_happy_path_model(
+            ScriptedModel, support=support_script(customer_response=degraded_response)
+        ),
+        data_client=FakeDataClient(unavailable=True),
     )
 
     result = orchestrator.run(make_ticket("My delivery is late.", order_reference="ORD-1001"))

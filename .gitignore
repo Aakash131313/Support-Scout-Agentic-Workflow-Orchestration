@@ -17,3 +17,14 @@ data_server/*.db
 # Windows alternate data streams (WSL artifacts from Windows-copied files)
 *:Zone.Identifier
 *:[0-9A-F][0-9A-F]*-*
+
+# Diagnostic run artifacts
+verify_output/
+verify_logs/
+batch_run_output/
+batch_run_logs/
+verify_demos_report.json
+batch_run_summary.json
+
+# One-time patch scripts
+patch_*.py

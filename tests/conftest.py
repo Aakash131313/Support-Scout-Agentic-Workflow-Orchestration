@@ -19,6 +19,7 @@ from support_scout.evidence_registry import EvidenceRegistry
 from support_scout.exceptions import ScrapeError, SupportDataNotFound
 from support_scout.schemas import SearchResult, SupportTicket
 
+
 # --------------------------------------------------------------------------------------
 # Scripted agent harness
 # --------------------------------------------------------------------------------------
@@ -83,10 +84,16 @@ class ScriptedAgent:
         self.instructions = instructions
         self.name = name
         self.description = description
+        # Real smolagents agents accumulate step history on the agent itself, and
+        # agents/base.py reads it from there. Mirror that so the offline suite
+        # exercises the same extraction path production uses.
+        self.memory = _Memory()
 
     def run(self, task: str, return_full_result: bool = False, **_: Any) -> Any:
         script = self.model.script_for(self.name)
-        memory = _Memory()
+        # Reset per run, then expose the same object through the run result.
+        self.memory = _Memory()
+        memory = self.memory
         context = ScriptContext()
 
         if script is None:
@@ -195,14 +202,22 @@ class FakeSearchAdapter:
 
 
 class FakeScraper:
-    """Returns canned page content keyed by URL."""
+    """Returns canned page content keyed by URL.
+
+    The default content deliberately spans all three support domains. Research now
+    screens each page for topical relevance, so a tracking-only fixture would be
+    rejected for returns and checkout tickets and every integration test would
+    escalate on insufficient evidence. A generic help-centre page keeps the fake out
+    of the way; tests that exercise relevance supply explicit `pages`.
+    """
 
     DEFAULT_CONTENT = (
-        "Carrier tracking updates can pause for a day or two between scans while a "
-        "parcel moves between facilities. Check the tracking number against the "
-        "carrier site, confirm the delivery address, and allow one extra business day "
-        "before reporting the parcel as lost. If tracking has not moved after that, "
-        "contact the carrier with your tracking reference."
+        "Tracking updates can pause between carrier scans while a parcel is in transit. "
+        "Confirm the delivery address shown on your order before reporting a package as "
+        "lost. If an item arrives damaged, a return can be requested through the returns "
+        "centre and a refund is processed once the warehouse receives it. For checkout or "
+        "payment problems, verify the billing address on your account and try the payment "
+        "again."
     )
 
     def __init__(self, pages: dict[str, dict[str, str]] | None = None, error: Exception | None = None) -> None:
@@ -217,7 +232,7 @@ class FakeScraper:
         if url in self.pages:
             return self.pages[url]
         return {
-            "title": "Tracking guidance",
+            "title": "Help centre guidance",
             "content": self.DEFAULT_CONTENT,
             "hash": f"hash-{abs(hash(url)) % 10_000_000:07d}",
             "final_url": url,
@@ -370,19 +385,6 @@ def make_ticket(message: str, **overrides: Any) -> SupportTicket:
     return SupportTicket.model_validate(payload)
 
 
-__all__ = [
-    "FakeDataClient",
-    "FakeScraper",
-    "FakeSearchAdapter",
-    "FakeURLPolicy",
-    "ScrapeError",
-    "ScriptContext",
-    "ScriptedAgent",
-    "ScriptedModel",
-    "make_ticket",
-]
-
-
 @pytest.fixture
 def orchestrator_builder(tmp_path, data_client, search_adapter, scraper, url_policy):
     """Build a fully wired orchestrator whose externals are all fakes."""
@@ -413,3 +415,16 @@ def orchestrator_builder(tmp_path, data_client, search_adapter, scraper, url_pol
         )
 
     return build
+
+
+__all__ = [
+    "FakeDataClient",
+    "FakeScraper",
+    "FakeSearchAdapter",
+    "FakeURLPolicy",
+    "ScrapeError",
+    "ScriptContext",
+    "ScriptedAgent",
+    "ScriptedModel",
+    "make_ticket",
+]

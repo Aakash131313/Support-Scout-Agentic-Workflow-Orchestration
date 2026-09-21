@@ -76,6 +76,7 @@ class EscalationReason(StrEnum):
     QA_FAILURE = "qa_failure"
     HUMAN_REJECTED = "human_rejected"
     EXECUTION_BUDGET_EXCEEDED = "execution_budget_exceeded"
+    AGENT_EXECUTION_FAILURE = "agent_execution_failure"
 
 
 class WorkflowStatus(StrEnum):

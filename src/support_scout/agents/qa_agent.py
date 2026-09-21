@@ -37,6 +37,10 @@ Authority:
   genuinely torn between approve and revise, choose revise.
 
 Finish by calling submit_qa_decision exactly once.
+
+Critical: never call final_answer as a substitute for submit_qa_decision.
+final_answer ends your turn without completing the task; only submit_qa_decision
+does that.
 """
 
 

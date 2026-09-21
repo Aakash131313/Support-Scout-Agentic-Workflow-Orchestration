@@ -245,6 +245,39 @@ curated deterministic baseline, not production performance, and the report says 
 
 ---
 
+## Validation
+
+Two harnesses, measuring different things.
+
+**Offline suite** — `pytest`, no keys, no network. Verifies mechanism: tools, kernel
+transitions, validators, artifacts, and the adversarial matrix. Integration tests drive
+the real orchestrator, kernel, tools and registry; only the model's tool choices and
+external HTTP are substituted.
+
+**Live harness** — `python3 verify_demos.py`. Runs all eighteen curated tickets against
+a real model and a running operations service, then checks each against its documented
+expected outcome. It flags retry loops, repeated submissions, exhausted revision
+budgets, operational evidence gathered but never cited, empty traces and missing
+artifacts.
+
+Most recent full run:
+
+| Measure | Result |
+|---|---:|
+| Expected outcome met | 18/18 |
+| Anomalies flagged | 0 |
+| Completed | 12 |
+| Escalated | 6 |
+| Tool calls traced | 503 |
+
+All six escalations carried the correct reason code with zero delegations: two
+`financial_authorization`, and one each of `policy_exception`, `account_compromise`,
+`outside_authority` and `sensitive_data`.
+
+The distinction between the two harnesses is the point. The offline suite passed
+completely while the live pass was at 10 of 18 — every failure a matter of judgment
+under real model output rather than of mechanism. See R-018 for what that implies.
+
 ## Project layout
 
 ```
@@ -272,10 +305,19 @@ support-scout/
 
 ## Known limitations
 
-Stated plainly, because overclaiming is its own failure:
-
-- **Conflict detection is a heuristic.** It matches explicit affirmative/negative pairs
-  and will miss subtly worded disagreement.
+- **Content checks reason about structure, not meaning.** Restricted-claim, inspection
+  and operational-claim detection work by inspecting sentence structure: negation,
+  hedging, subject agency, topical subject. This survives paraphrase far better than
+  the phrase lists it replaced, but it is still not comprehension. A hedged passive
+  construction such as "your refund may have been approved" is not flagged — the
+  deliberate cost of allowing "the order may have been canceled" as legitimate
+  speculation.
+- **Conflict detection is conservative.** It requires two different sources holding
+  opposed positions on a named topic, with neither hedged. Subtly worded disagreement,
+  or disagreement on a topic not in the list, is missed. It errs toward escalating.
+- **Research relevance is vocabulary-based.** Sources are screened against per-domain
+  term lists. A relevant source using unusual vocabulary can be rejected; add terms to
+  `DOMAIN_TERMS` rather than lowering the threshold.
 - **Sentiment is lexicon-based.** It does not detect sarcasm or implied frustration.
 - **Research is public-web only.** There is no internal policy corpus, so some policy
   questions escalate that a knowledge base could answer.
@@ -283,7 +325,13 @@ Stated plainly, because overclaiming is its own failure:
 - **Synthetic data throughout.** The operations service contains fabricated records; no
   real customer system is touched.
 - **Evaluation is curated.** Frozen fixtures measure the deterministic layer, not live
-  model quality.
+  model quality. The live harness (`verify_demos.py`) measures end-to-end behaviour on
+  eighteen curated tickets against a real model, which is a different and complementary
+  measurement.
+- **Token budgets are traced, not enforced.** Step and tool-call budgets bound a run;
+  token spend is recorded but does not itself stop one.
+- **The trace records tool names, not tool results.** A deliberately rejected call
+  cannot be distinguished from an accepted one when reading a trace file.
 
 ---
 

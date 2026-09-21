@@ -6,7 +6,11 @@ evidence may be cited. That rule is enforced deterministically by
 `ArticlePrivacyValidator` rather than by prompt instruction alone.
 
 Structured arguments are declared `Any` and normalised by `json_args`, because a model
-sends a native JSON array or object as often as a JSON string.
+sends a native JSON array or object as often as a JSON string. The article's nested
+list fields are normalised too, for the same reason `submit_support_draft` does it: a
+live run showed the model sending a valid top-level object whose list fields were bare
+strings, wasting a round-trip per attempt. The documentation agent had not yet been
+reached on those tickets, so this is a pre-emptive fix for the identical shape.
 """
 from __future__ import annotations
 
@@ -19,7 +23,15 @@ from smolagents import tool
 from ..evidence_registry import EvidenceRegistry
 from ..schemas import TroubleshootingArticle
 from ..services.content_validation import ArticlePrivacyValidator
-from .json_args import ToolArgumentError, coerce_json_object, coerce_json_string_list
+from .json_args import (
+    ToolArgumentError,
+    coerce_json_object,
+    coerce_json_string_list,
+    normalize_list_fields,
+)
+
+#: TroubleshootingArticle fields the schema requires as lists.
+ARTICLE_LIST_FIELDS: tuple[str, ...] = ("source_evidence_ids", "limitations")
 
 
 @dataclass
@@ -116,6 +128,9 @@ def build_documentation_tools(
         Rejects ticket, order, customer, shipment, return, checkout, account and
         operational identifiers anywhere in the article, including the body text.
 
+        source_evidence_ids and limitations are lists. A single bare string is accepted
+        for either and wrapped automatically.
+
         Args:
             article_json: The TroubleshootingArticle as a JSON object.
         """
@@ -123,6 +138,10 @@ def build_documentation_tools(
             payload = coerce_json_object(article_json, field="article_json")
         except ToolArgumentError as exc:
             return json.dumps({"status": "rejected", "reason": str(exc)})
+
+        # Tolerate a bare string where the schema wants a list, rather than spending a
+        # retry on a shape the tool can correct itself.
+        payload = normalize_list_fields(payload, ARTICLE_LIST_FIELDS)
 
         try:
             article = TroubleshootingArticle.model_validate(payload)
@@ -158,10 +177,26 @@ def build_documentation_tools(
     def submit_article(reason: str) -> str:
         """Submit the reusable article after the privacy check has passed.
 
+        The first submission is final: calling this again returns "already_submitted".
+
         Args:
             reason: A short note on why the article is ready to publish.
         """
         del reason
+        # The first submission wins. A repeat call means the agent has not noticed it
+        # is finished; say so plainly instead of silently re-submitting.
+        if workspace.submitted and workspace.article is not None:
+            return json.dumps(
+                {
+                    "status": "already_submitted",
+                    "reason": (
+                        "The article was already submitted for this ticket. Your work "
+                        "here is complete; stop calling this tool."
+                    ),
+                    "title": workspace.article.title,
+                }
+            )
+
         if workspace.article is None or not workspace.privacy_checked:
             return json.dumps(
                 {

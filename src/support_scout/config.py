@@ -60,6 +60,7 @@ class Settings:
     max_orchestrator_steps: int = 16
     max_total_tool_calls: int = 40
     max_calls_per_tool: int = 6
+    max_delegation_failures: int = 2
 
     # Human-in-the-loop.
     require_human_approval: bool = True
@@ -89,6 +90,7 @@ class Settings:
             max_orchestrator_steps=_int("MAX_ORCHESTRATOR_STEPS", 16),
             max_total_tool_calls=_int("MAX_TOTAL_TOOL_CALLS", 40),
             max_calls_per_tool=_int("MAX_CALLS_PER_TOOL", 6),
+            max_delegation_failures=_int("MAX_DELEGATION_FAILURES", 2),
             require_human_approval=_bool("SUPPORTSCOUT_REQUIRE_APPROVAL", True),
             auto_approve_restricted_actions=_bool("SUPPORTSCOUT_AUTO_APPROVE", False),
             output_directory=Path(os.getenv("OUTPUT_DIRECTORY", "output")),

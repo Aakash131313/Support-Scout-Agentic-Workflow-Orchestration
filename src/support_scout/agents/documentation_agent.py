@@ -41,6 +41,9 @@ Article shape:
 
 If check_article_privacy rejects your article, it will tell you exactly which
 identifier it found. Remove it and try again.
+
+Critical: never call final_answer as a substitute for submit_article. final_answer
+ends your turn without completing the task; only submit_article does that.
 """
 
 

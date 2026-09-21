@@ -22,6 +22,7 @@ from typing import Any, Callable
 from smolagents import tool
 
 from ..exceptions import SupportScoutError, WorkflowError
+from ..schemas import EscalationReason
 from ..workflow.kernel import WorkflowKernel
 
 #: Signature every specialist adapter satisfies: it receives the kernel and applies
@@ -35,7 +36,14 @@ def _delegate(
     tool_name: str,
     runner: SpecialistCallable,
 ) -> str:
-    """Shared delegation body: validate state, run the specialist, record the outcome."""
+    """Shared delegation body: validate state, run the specialist, record the outcome.
+
+    Repeated consecutive failures of the same specialist are bounded deterministically.
+    The orchestrator's own instructions ask it to stop retrying after two failures, but
+    a prompt is a request, not a guarantee -- this enforces the limit regardless of what
+    the orchestrator model decides to do, escalating with a specific, named reason
+    instead of silently exhausting the run's step budget.
+    """
     try:
         kernel.count_tool_call(tool_name)
         kernel.require_state_for(specialist)
@@ -45,16 +53,13 @@ def _delegate(
     try:
         summary = runner(kernel)
     except SupportScoutError as exc:
-        kernel.logger.error(exc, agent_name=specialist)
-        kernel.record_delegation(specialist, tool_name, status="failed")
-        return json.dumps({"delegated": False, "reason": str(exc)})
+        return _handle_delegation_failure(kernel, specialist, tool_name, exc, str(exc))
     except Exception as exc:  # noqa: BLE001 - never let a specialist kill the run silently
-        kernel.logger.error(exc, agent_name=specialist)
-        kernel.record_delegation(specialist, tool_name, status="failed")
-        return json.dumps(
-            {"delegated": False, "reason": f"The {specialist} specialist failed: {type(exc).__name__}"}
+        return _handle_delegation_failure(
+            kernel, specialist, tool_name, exc, f"The {specialist} specialist failed: {type(exc).__name__}"
         )
 
+    kernel.note_delegation_success(specialist)
     kernel.record_delegation(specialist, tool_name, status="succeeded")
     return json.dumps(
         {
@@ -65,6 +70,46 @@ def _delegate(
         },
         default=str,
     )
+
+
+def _handle_delegation_failure(
+    kernel: WorkflowKernel,
+    specialist: str,
+    tool_name: str,
+    exc: Exception,
+    reason: str,
+) -> str:
+    """Record one delegation failure and escalate once the streak crosses the limit.
+
+    The exception is logged to the error audit here, exactly as the previous
+    implementation did -- only the escalation-on-streak behaviour is new.
+    """
+    kernel.logger.error(exc, agent_name=specialist)
+    kernel.record_delegation(specialist, tool_name, status="failed")
+    failure_count = kernel.note_delegation_failure(specialist)
+
+    if failure_count >= kernel.max_delegation_failures:
+        kernel.escalate(
+            EscalationReason.AGENT_EXECUTION_FAILURE,
+            summary=(
+                f"The {specialist} agent failed {failure_count} times in a row "
+                f"and could not produce a valid result."
+            ),
+            recommended_action=(
+                f"Review the ticket manually; the {specialist} step could not be "
+                "completed automatically."
+            ),
+        )
+        return json.dumps(
+            {
+                "delegated": False,
+                "reason": reason,
+                "escalated": True,
+                "current_state": kernel.state.current_state.value,
+            }
+        )
+
+    return json.dumps({"delegated": False, "reason": reason})
 
 
 def build_orchestration_tools(

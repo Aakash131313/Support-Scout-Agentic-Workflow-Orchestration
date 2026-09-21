@@ -66,6 +66,12 @@ When a tool call fails:
   better than a loop.
 
 Finish by calling final_answer with one sentence describing the outcome.
+
+Critical: never call final_answer in place of finalize_workflow. final_answer ends
+your turn without finalizing the workflow, which causes the run to be recorded as a
+failure even when every specialist succeeded. finalize_workflow is the only tool that
+completes a run. Call it once the workflow reaches a terminal state -- documented,
+or escalated -- and only call final_answer afterwards, if at all.
 """
 
 
@@ -100,6 +106,7 @@ class OrchestratorAgent:
         confidence_threshold: float = 0.70,
         max_revisions: int = 1,
         max_total_tool_calls: int = 40,
+        max_delegation_failures: int = 2,
         max_steps: int = 16,
         agent_factory: Callable[..., Any] = ToolCallingAgent,
     ) -> None:
@@ -117,6 +124,7 @@ class OrchestratorAgent:
         self.confidence_threshold = confidence_threshold
         self.max_revisions = max_revisions
         self.max_total_tool_calls = max_total_tool_calls
+        self.max_delegation_failures = max_delegation_failures
         self.max_steps = max_steps
         self.agent_factory = agent_factory
 
@@ -238,6 +246,7 @@ class OrchestratorAgent:
             approval_gate=self.approval_gate,
             max_revisions=self.max_revisions,
             max_total_tool_calls=self.max_total_tool_calls,
+            max_delegation_failures=self.max_delegation_failures,
         )
 
         # Point every specialist at this run's logger so the trace is single-sourced.

@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from support_scout.artifacts import ArtifactWriter, build_interaction_summary, write_run_artifacts
 from support_scout.exceptions import FileOutputError, ModelTimeoutError, SupportDataNotFound
 from support_scout.hitl import (
+    ApprovalRequest,
     AutoApproveGate,
     AutoDenyGate,
     InteractiveApprovalGate,
@@ -130,29 +131,113 @@ def test_only_restricted_actions_require_approval(reason, expected):
     assert requires_human_approval(reason) is expected
 
 
-def test_unattended_gate_denies_by_default():
-    decision = AutoDenyGate().request(
-        action="issue refund", reason=EscalationReason.FINANCIAL_AUTHORIZATION, context=""
+def _approval_request(
+    message: str = "Please approve a refund for this purchase.",
+    reason: EscalationReason = EscalationReason.FINANCIAL_AUTHORIZATION,
+) -> ApprovalRequest:
+    return ApprovalRequest(
+        ticket_id="TKT-TEST-001",
+        customer_message=message,
+        reason=reason,
+        action=f"Continue automated handling despite {reason.value}",
     )
+
+
+def test_unattended_gate_denies_by_default():
+    decision = AutoDenyGate().request(request=_approval_request())
     assert decision.approved is False
 
 
 def test_auto_approve_gate_approves():
-    decision = AutoApproveGate().request(
-        action="issue refund", reason=EscalationReason.FINANCIAL_AUTHORIZATION, context=""
-    )
+    decision = AutoApproveGate().request(request=_approval_request())
     assert decision.approved is True
 
 
-@pytest.mark.parametrize("answer,expected", [("y", True), ("yes", True), ("n", False), ("", False)])
+@pytest.mark.parametrize(
+    "answer,expected",
+    [("y", True), ("Y", True), ("yes", True), ("n", False), ("", False), ("garbage", False)],
+)
 def test_interactive_gate_reads_the_operator_answer(answer, expected):
     import io
 
     gate = InteractiveApprovalGate(stream=io.StringIO(), prompt_input=lambda _: answer)
-    decision = gate.request(
-        action="issue refund", reason=EscalationReason.FINANCIAL_AUTHORIZATION, context="ctx"
-    )
+    decision = gate.request(request=_approval_request())
     assert decision.approved is expected
+
+
+def test_gate_shows_the_customer_message_to_the_operator():
+    """An operator cannot decide responsibly without seeing the request."""
+    import io
+
+    stream = io.StringIO()
+    gate = InteractiveApprovalGate(stream=stream, prompt_input=lambda _: "n")
+    gate.request(request=_approval_request("My parcel arrived smashed, I want a refund."))
+
+    shown = stream.getvalue()
+    assert "My parcel arrived smashed" in shown
+    assert "TKT-TEST-001" in shown
+
+
+def test_gate_states_that_approval_does_not_grant_the_request():
+    """The gate must never read as though the operator is approving the refund."""
+    import io
+
+    stream = io.StringIO()
+    gate = InteractiveApprovalGate(stream=stream, prompt_input=lambda _: "n")
+    gate.request(request=_approval_request())
+
+    shown = stream.getvalue()
+    assert "NOT APPROVING" in shown
+    assert "No refund, credit or payment will be issued" in shown
+
+
+def test_gate_redacts_secrets_before_display():
+    """Ticket text reaches a human here, so it is redacted like every other sink."""
+    import io
+
+    stream = io.StringIO()
+    gate = InteractiveApprovalGate(stream=stream, prompt_input=lambda _: "n")
+    gate.request(
+        request=_approval_request("Refund my card 4111 1111 1111 1111, password: hunter2")
+    )
+
+    shown = stream.getvalue()
+    assert "4111" not in shown
+    assert "hunter2" not in shown
+    assert "[REDACTED]" in shown
+
+
+@pytest.mark.parametrize(
+    "reason,expected_limit",
+    [
+        (EscalationReason.FINANCIAL_AUTHORIZATION, "No refund, credit or payment"),
+        (EscalationReason.POLICY_EXCEPTION, "No policy exception"),
+        (EscalationReason.ACCOUNT_COMPROMISE, "No account change"),
+    ],
+)
+def test_gate_explains_the_limit_for_each_restricted_reason(reason, expected_limit):
+    import io
+
+    stream = io.StringIO()
+    gate = InteractiveApprovalGate(stream=stream, prompt_input=lambda _: "n")
+    gate.request(request=_approval_request(reason=reason))
+
+    assert expected_limit in stream.getvalue()
+
+
+def test_gate_confirms_the_outcome_after_the_answer():
+    import io
+
+    approved_stream, denied_stream = io.StringIO(), io.StringIO()
+    InteractiveApprovalGate(stream=approved_stream, prompt_input=lambda _: "y").request(
+        request=_approval_request()
+    )
+    InteractiveApprovalGate(stream=denied_stream, prompt_input=lambda _: "n").request(
+        request=_approval_request()
+    )
+
+    assert "Drafting a reply" in approved_stream.getvalue()
+    assert "Escalating to a human queue" in denied_stream.getvalue()
 
 
 def test_build_gate_selects_the_right_implementation():
