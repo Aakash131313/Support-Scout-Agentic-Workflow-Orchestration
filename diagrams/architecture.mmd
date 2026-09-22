@@ -1,3 +1,12 @@
+%% SupportScout - system architecture
+%% The agent chooses. The kernel decides whether the choice is legal.
+%%
+%% Fixes applied vs the previous revision:
+%%   - Angle brackets in the ticket_id and run_id placeholders are now written
+%%     as HTML entities. Mermaid parses labels as HTML by default, so the raw
+%%     form was read as an unknown tag and dropped, rendering "output//".
+%%   - Italic styling markup removed from the orchestrator label; it renders
+%%     only where htmlLabels is enabled.
 flowchart TD
     CLI["CLI: support-scout run"] --> VALIDATE["SupportTicket validation"]
     VALIDATE --> SCREEN["SafetyScreener<br/>deterministic pre-model screening"]
@@ -8,10 +17,10 @@ flowchart TD
     SCREEN -->|other escalation| ESC
     SCREEN -->|clear| ORCH
 
-    ORCH["OrchestratorAgent<br/><i>ToolCallingAgent</i>"]
+    ORCH["OrchestratorAgent<br/>ToolCallingAgent · 7 tools"]
     ORCH <-->|"inspect_workflow_state"| KERNEL
 
-    KERNEL["WorkflowKernel<br/>transitions · escalation · budgets"]
+    KERNEL["WorkflowKernel<br/>transitions · escalation · budgets · retry bounds"]
 
     ORCH -->|"delegate_to_triage"| TRIAGE
     ORCH -->|"delegate_to_research"| RESEARCH
@@ -37,17 +46,17 @@ flowchart TD
     RESEARCH -->|"bounded search"| TAVILY["Tavily adapter"]
     RESEARCH -->|"validate then fetch"| URLPOL["URLPolicy<br/>SSRF defence + redirect revalidation"]
     URLPOL --> SCRAPER["WebScraper<br/>timeout · size · type · characters"]
-    SUPPORT -->|"read-only HTTP"| OPSVC["Operations service<br/>FastAPI + SQLModel"]
+    SUPPORT -->|"read-only HTTP"| OPSVC["Operations service<br/>FastAPI + SQLModel · 7 GET routes"]
 
     SCRAPER -->|"EV-NNN"| REGISTRY
-    OPSVC -->|"OP-NNN"| REGISTRY
+    OPSVC -->|"OP-NNN, including confirmed absences"| REGISTRY
     REGISTRY["EvidenceRegistry<br/>deterministic IDs · dedupe"]
     REGISTRY --> SUPPORT
     REGISTRY --> QA
     REGISTRY --> DOC
 
     KERNEL -->|"QA revise, within limit"| SUPPORT
-    KERNEL -->|"insufficient · conflicting · revision limit · QA block"| ESC
+    KERNEL -->|"insufficient · conflicting · revision limit<br/>QA block · agent execution failure"| ESC
     KERNEL -->|"documented"| COMPLETE["COMPLETED<br/>terminal"]
 
     ESC --> ARTIFACTS

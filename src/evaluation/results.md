@@ -3,7 +3,7 @@
 This is a curated deterministic baseline, not production performance.
 
 - Dataset version: 2.0
-- Evaluation date: 2026-09-18
+- Evaluation date: 2026-09-21
 - Cases evaluated: 18
 - Failed cases: 0
 
