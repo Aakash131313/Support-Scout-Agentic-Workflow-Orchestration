@@ -50,7 +50,7 @@ class Settings:
 
     request_timeout_seconds: int = 10
     max_search_results: int = 5
-    max_pages_to_scrape: int = 3
+    max_pages_to_scrape: int = 5
     max_page_characters: int = 20_000
     max_agent_revisions: int = 1
     classification_confidence_threshold: float = 0.70
@@ -80,7 +80,7 @@ class Settings:
             udacity_base_url=os.getenv("UDACITY_BASE_URL") or None,
             request_timeout_seconds=_int("REQUEST_TIMEOUT_SECONDS", 10),
             max_search_results=_int("MAX_SEARCH_RESULTS", 5),
-            max_pages_to_scrape=_int("MAX_PAGES_TO_SCRAPE", 3),
+            max_pages_to_scrape=_int("MAX_PAGES_TO_SCRAPE", 5),
             max_page_characters=_int("MAX_PAGE_CHARACTERS", 20_000),
             max_agent_revisions=_int("MAX_AGENT_REVISIONS", 1),
             classification_confidence_threshold=_float(

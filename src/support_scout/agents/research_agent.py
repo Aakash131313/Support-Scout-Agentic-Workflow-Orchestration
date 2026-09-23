@@ -86,7 +86,7 @@ class ResearchAgent:
         scraper: Any,
         logger: Any,
         assessor: EvidenceAssessor | None = None,
-        max_pages: int = 3,
+        max_pages: int = 5,
         max_steps: int = 14,
         enforce_relevance: bool = True,
         agent_factory: Callable[..., Any] = ToolCallingAgent,

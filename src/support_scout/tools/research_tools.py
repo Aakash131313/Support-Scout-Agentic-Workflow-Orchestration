@@ -71,7 +71,7 @@ def build_research_tools(
     url_policy: Any,
     scraper: Any,
     assessor: EvidenceAssessor | None = None,
-    max_pages: int = 3,
+    max_pages: int = 5,
     enforce_relevance: bool = True,
 ) -> list[Any]:
     """Create the research tool set bound to one run's workspace and services."""
